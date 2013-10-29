@@ -2,7 +2,7 @@
 #include <highgui.h>
 double top1,top2,bottom1,bottom2,left1,left2,right1,right2,topM,bottomM,leftM,rightM;
 int thickness=10;
-CvScalar color={0,0,0};
+CvScalar color={255,0,255};
 int main(int argc, const char *argv[])
 {
 	///readimage
@@ -12,16 +12,16 @@ int main(int argc, const char *argv[])
 
 	//read current frame
 	sscanf(argv[1],"output_%lf_%lf_%lf_%lf.png",
-			top1,bottom1,left1,right1);
+			&top1,&bottom1,&left1,&right1);
 	//read next frame
 	sscanf(argv[2],"output_%lf_%lf_%lf_%lf.png",
-			top2,bottom2,left2,right2);
+			&top2,&bottom2,&left2,&right2);
 	//caculate lines;
 
 	topM=4000-4000*(top2-bottom1)/(top1-bottom1);
 	bottomM=4000-4000*(bottom2-bottom1)/(top1-bottom1);
-	leftM=4000*(left2-right1)/(left1-right1);
-	rightM=4000*(right2-right1)/(left1-right1);
+	leftM=4000-4000*(left2-right1)/(left1-right1);
+	rightM=4000-4000*(right2-right1)/(left1-right1);
 
 	
 
@@ -36,7 +36,8 @@ int main(int argc, const char *argv[])
 	cvLine(img, pBottomLeft, pTopLeft, color, thickness, 8, 0);
 
 	//draw lines;
-
+	cvSaveImage("output.png", img, 0);
+	cvReleaseImage(&img);
 	//saveimage;
 	return 0;
 }
