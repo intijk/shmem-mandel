@@ -5,6 +5,8 @@
 #include <complex.h>
 #include <glib.h>
 
+#define debug
+
 gint imgWidth,imgHeight;
 gdouble top,bottom,left,right;
 gint maxIter;
@@ -50,7 +52,21 @@ int pallet[PALLET_MAX_SIZE][3]={
 };
 */
 
+//qingkuai c2
+int palletSize=7;
+int pallet[PALLET_MAX_SIZE][3]={
+		{0xbd,0x21,0x19},
+		{0xf7,0x94,0x63},
+		{0xff,0xe6,0x08},
+		{0xd6,0x94,0x19},
+		{0x29,0xb5,0xce},
+		{0xf7,0xff,0xf7},
+		{0x73,0x7b,0xb5},
+};
+
+
 // donggan c 1
+/*
 int palletSize=7;
 int pallet[PALLET_MAX_SIZE][3]={
 		{0x63,0x73,0xb5},
@@ -61,6 +77,7 @@ int pallet[PALLET_MAX_SIZE][3]={
 		{0xef,0x3a,0x21},
 		{0x00,0x00,0x00},
 };
+*/
 
 int main(int argc, char const *argv[])
 {
@@ -194,6 +211,7 @@ int main(int argc, char const *argv[])
 							
 		return 0;
 }
+
 int readConfig(){
 
 	GKeyFile *confile=g_key_file_new();
