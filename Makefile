@@ -10,3 +10,6 @@ open:output.png
 line:
 	gcc -lm `pkg-config --cflags opencv glib-2.0`  line.c `pkg-config --libs opencv glib-2.0`  -o l
 
+.PHONY: clean
+clean:
+	rm m output.png
