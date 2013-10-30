@@ -88,8 +88,8 @@ main (int argc, char const *argv[])
   /* init PEs */
   time_t start_time = time (NULL);
   start_pes (0);
-  int me = _my_pe();
-  int npes = _num_pes();
+  int me = _my_pe ();
+  int npes = _num_pes ();
 
   time_t init_time = time (NULL);
 #ifdef debug
@@ -97,7 +97,7 @@ main (int argc, char const *argv[])
 #endif
   
   /* Read and print configuration */
-  readConfig();
+  readConfig ();
   int width=imgWidth;
   int height=imgHeight;
   int widthStep;
@@ -123,14 +123,14 @@ main (int argc, char const *argv[])
 
   /* create image */
   if (me == 0) {
-    img = cvCreateImage(cvSize(width,height), IPL_DEPTH_8U, nC);
+    img = cvCreateImage (cvSize (width,height), IPL_DEPTH_8U, nC);
   }
   widthStep = width*nC;
 
   int imageSize = widthStep * height;
 
   /*rowPerP: row number for every PE to tackle*/
-  int rowPerP = (int)(ceil((double)height/npes));
+  int rowPerP = (int)(ceil((double)height / npes));
   int blockSize=rowPerP*widthStep;
 #ifdef debug
   if (me == 0) {
@@ -141,11 +141,11 @@ main (int argc, char const *argv[])
 
   /* allocate symmetric buffer */
   char* taskB = (char*)shmalloc(imageSize);
-  memset(taskB, 0, blockSize);
+  memset (taskB, 0, blockSize);
     
-  time_t shmalloc_time=time(NULL);
+  time_t shmalloc_time = time (NULL);
 #ifdef debug
-  printf("%d: shmalloc time = %ds\n", me, shmalloc_time-init_time);
+  printf ("%d: shmalloc time = %ds\n", me, shmalloc_time-init_time);
 #endif
 
   /* compute on PEs */
@@ -170,11 +170,11 @@ main (int argc, char const *argv[])
 
   time_t compute_time = time (NULL);
 #ifdef debug
-  printf("%d: compute time = %ds\n", me, compute_time - shmalloc_time);
+  printf ("%d: compute time = %ds\n", me, compute_time - shmalloc_time);
 #endif
 
   /* gather data from different PEs */
-  if(me < npes-1){
+  if (me < npes-1) {
     shmem_putmem (taskB + me * blockSize, taskB, blockSize, 0);
   }else{
     int restSize = imageSize - (npes - 1) * blockSize;
@@ -213,14 +213,14 @@ main (int argc, char const *argv[])
 }
 
 int 
-readConfig()
+readConfig ()
 {
   GKeyFile *confile = g_key_file_new ();
   GKeyFileFlags flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;;
   GError *error = NULL;
 
-  if(!g_key_file_load_from_file (confile, "mandelbrot.conf", flags, &error)) {
-    g_error(error->message);
+  if (!g_key_file_load_from_file (confile, "mandelbrot.conf", flags, &error)) {
+    g_error (error->message);
     return -1;
   }
 
