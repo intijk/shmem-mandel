@@ -1,15 +1,21 @@
+OPENCV_FLAGS = $(shell pkg-config --cflags opencv)
+OPENCV_LIBS = $(shell pkg-config --libs opencv)
+
+GLIB2_FLAGS = $(shell pkg-config --cflags glib-2.0)
+GLIB2_LIBS = $(shell pkg-config --libs glib-2.0)
+
+OSHCCFLAGS = -g -O3
+
+CC = oshcc
+CFLAGS = $(OSHCCFLAGS) $(OPENCV_FLAGS) $(GLIB2_FLAGS)
+
+LIBS = $(OPENCV_LIBS) $(GLIB2_LIBS) -lm
+
+
 m: mandelbrot.c
-	oshcc -lm `pkg-config --cflags opencv glib-2.0`  mandelbrot.c `pkg-config --libs opencv glib-2.0`  -o m
-
-output.png:m mandelbrot.conf
-	salloc --exclusive -w shark25,shark26 oshrun -np 16 ./m
-
-open:output.png
-	evince ./output.png
-
-line:
-	gcc -lm `pkg-config --cflags opencv glib-2.0`  line.c `pkg-config --libs opencv glib-2.0`  -o l
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 .PHONY: clean
+
 clean:
-	rm m output.png
+	rm -f m output.png
