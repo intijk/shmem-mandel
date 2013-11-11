@@ -92,7 +92,7 @@ main (int argc, char const *argv[])
 
   time_t init_time = time (NULL);
 #ifdef debug
-  printf ("%d: shmem init time = %ds\n", me, init_time -= start_time);
+  printf ("%d: shmem init time = %ds\n", me, init_time - start_time);
 #endif
 
   /* Read and print configuration */
@@ -235,11 +235,14 @@ main (int argc, char const *argv[])
   /*save image */
   if (me == 0)
     {
-      time_t finish_time = time (NULL);
-      printf ("Total time cost:      %ds\n\n",
-	      (int) (finish_time - start_time));
+
+      printf ("SHMEM time cost:      %ds\n\n",
+	      (int) (gather_time - start_time));
       cvSaveImage ("output.png", img, 0);
       cvReleaseImage (&img);
+
+  	time_t finish_time = time (NULL);
+  printf ("Total time cost:      %ds\n\n", (int) (finish_time - start_time));
     }
 
   return 0;
