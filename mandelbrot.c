@@ -92,11 +92,17 @@ main (int argc, char const *argv[])
 
   time_t init_time = time (NULL);
 #ifdef debug
-  printf ("%d: shmem init time = %ds\n", me, init_time - start_time);
+  printf ("%d: shmem init time = %ds\n", me, init_time -= start_time);
 #endif
 
   /* Read and print configuration */
   readConfig ();
+
+/* width:  target image output width, in pixel
+ * height: target image output height, in pixel
+ * widthStep: number of bytes in one row of image
+ * nC: color depth, 3 means 3 bytes, ie. 24 bits
+ * */
   int width = imgWidth;
   int height = imgHeight;
   int widthStep;
@@ -108,6 +114,9 @@ main (int argc, char const *argv[])
 
   if (me == 0)
     {
+/*
+ * Interest image area is described by top, bottom, left and right, they are coordinates on 2d cartesian space.
+ */
       printf ("Image size:\n      %d x %d\n\n", imgWidth, imgHeight);
       printf ("Interest area:\n");
       printf ("      +-------- %-10f --------+\n", top);
@@ -132,6 +141,7 @@ main (int argc, char const *argv[])
 
   /*rowPerP: row number for every PE to tackle */
   int rowPerP = (int) (ceil ((double) height / npes));
+  /*blockSize: the actual parted image size for each PE(except one when dividing is not even) to compute */
   int blockSize = rowPerP * widthStep;
 #ifdef debug
   if (me == 0)
@@ -151,7 +161,10 @@ main (int argc, char const *argv[])
   printf ("%d: shmalloc time = %ds\n", me, shmalloc_time - init_time);
 #endif
 
-  /* compute on PEs */
+/* compute on PEs 
+ * k is the iteration times which will decide the pixel's color, after iterations, |z| will great than 2
+ * the pixel's color will pickby k, as the color number with k mod palletSize.
+ * */
   for (i = 0; i < rowPerP; i++)
     {
       for (j = 0; j < width; j++)
