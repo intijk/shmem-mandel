@@ -13,7 +13,8 @@ gint maxIter;
 
 #define PALLET_MAX_SIZE 100
 int readConfig (void);
-/* original
+/* Color schema original */
+/*
 int palletSize=7;
 int pallet[PALLET_MAX_SIZE][3]={
   {255,0,0},
@@ -26,8 +27,8 @@ int pallet[PALLET_MAX_SIZE][3]={
 };
 */
 
+/* Color Schema gray and yellow */
 /*
-gray and yellow
 int palletSize=5;
 int pallet[PALLET_MAX_SIZE][3]={
   {0x71,0x27,0x04},
@@ -38,7 +39,7 @@ int pallet[PALLET_MAX_SIZE][3]={
 };
 */
 
-//jiaomei c2
+/*Color schema jiaomei c2 */
 /*
 int palletSize=7;
 int pallet[PALLET_MAX_SIZE][3]={
@@ -52,7 +53,7 @@ int pallet[PALLET_MAX_SIZE][3]={
 };
 */
 
-/* qingkuai c2 */
+/* Color schema qingkuai c2 */
 int palletSize=7;
 
 int 
@@ -68,7 +69,7 @@ pallet[PALLET_MAX_SIZE][3] =
 };
 
 
-/* donggan c 1 */
+/* Color schema donggan c 1 */
 /*
 int palletSize=7;
 int pallet[PALLET_MAX_SIZE][3]={
