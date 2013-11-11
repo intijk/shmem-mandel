@@ -201,6 +201,8 @@ main (int argc, char const *argv[])
     memcpy (img->imageData, taskB, imageSize);
   }
 
+   
+  shfree(taskB);
 
   /*save image*/
   if (me == 0) {
