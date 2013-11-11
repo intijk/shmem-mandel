@@ -241,8 +241,9 @@ main (int argc, char const *argv[])
       cvSaveImage ("output.png", img, 0);
       cvReleaseImage (&img);
 
-  	time_t finish_time = time (NULL);
-  printf ("Total time cost:      %ds\n\n", (int) (finish_time - start_time));
+      time_t finish_time = time (NULL);
+      printf ("Total time cost:      %ds\n\n",
+	      (int) (finish_time - start_time));
     }
 
   return 0;
