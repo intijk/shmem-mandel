@@ -7,8 +7,8 @@
 
 #define debug
 
-gint imgWidth,imgHeight;
-gdouble top,bottom,left,right;
+gint imgWidth, imgHeight;
+gdouble top, bottom, left, right;
 gint maxIter;
 
 #define PALLET_MAX_SIZE 100
@@ -54,18 +54,16 @@ int pallet[PALLET_MAX_SIZE][3]={
 */
 
 /* Color schema qingkuai c2 */
-int palletSize=7;
+int palletSize = 7;
 
-int 
-pallet[PALLET_MAX_SIZE][3] =
-{
-  {0xbd,0x21,0x19},
-  {0xf7,0x94,0x63},
-  {0xff,0xe6,0x08},
-  {0xd6,0x94,0x19},
-  {0x29,0xb5,0xce},
-  {0xf7,0xff,0xf7},
-  {0x73,0x7b,0xb5},
+int pallet[PALLET_MAX_SIZE][3] = {
+  {0xbd, 0x21, 0x19},
+  {0xf7, 0x94, 0x63},
+  {0xff, 0xe6, 0x08},
+  {0xd6, 0x94, 0x19},
+  {0x29, 0xb5, 0xce},
+  {0xf7, 0xff, 0xf7},
+  {0x73, 0x7b, 0xb5},
 };
 
 
@@ -83,7 +81,7 @@ int pallet[PALLET_MAX_SIZE][3]={
 };
 */
 
-int 
+int
 main (int argc, char const *argv[])
 {
   /* init PEs */
@@ -96,78 +94,90 @@ main (int argc, char const *argv[])
 #ifdef debug
   printf ("%d: shmem init time = %ds\n", me, init_time - start_time);
 #endif
-  
+
   /* Read and print configuration */
   readConfig ();
-  int width=imgWidth;
-  int height=imgHeight;
+  int width = imgWidth;
+  int height = imgHeight;
   int widthStep;
-  int nC=3;
-  int i,j,k,nCi;
+  int nC = 3;
+  int i, j, k, nCi;
   complex z;
   complex c;
   IplImage *img;
 
-  if (me == 0) {
-    printf ("Image size:\n      %d x %d\n\n", imgWidth, imgHeight);
-    printf ("Interest area:\n");
-    printf ("      +-------- %-10f --------+\n", top);
-    printf ("      |                            |\n");
-    printf ("      |                            |\n");
-    printf (" %-10f                  %-10f\n", left, right); 
-    printf ("      |                            |\n");
-    printf ("      |                            |\n");
-    printf ("      +-------- %-10f --------+\n\n", bottom);
-    printf ("Max iteration time:\n      %d\n\n", maxIter);
-    printf ("npes:\n      %d\n\n", npes);
-  }
+  if (me == 0)
+    {
+      printf ("Image size:\n      %d x %d\n\n", imgWidth, imgHeight);
+      printf ("Interest area:\n");
+      printf ("      +-------- %-10f --------+\n", top);
+      printf ("      |                            |\n");
+      printf ("      |                            |\n");
+      printf (" %-10f                  %-10f\n", left, right);
+      printf ("      |                            |\n");
+      printf ("      |                            |\n");
+      printf ("      +-------- %-10f --------+\n\n", bottom);
+      printf ("Max iteration time:\n      %d\n\n", maxIter);
+      printf ("npes:\n      %d\n\n", npes);
+    }
 
   /* create image */
-  if (me == 0) {
-    img = cvCreateImage (cvSize (width,height), IPL_DEPTH_8U, nC);
-  }
-  widthStep = width*nC;
+  if (me == 0)
+    {
+      img = cvCreateImage (cvSize (width, height), IPL_DEPTH_8U, nC);
+    }
+  widthStep = width * nC;
 
   int imageSize = widthStep * height;
 
-  /*rowPerP: row number for every PE to tackle*/
-  int rowPerP = (int)(ceil((double)height / npes));
-  int blockSize=rowPerP*widthStep;
+  /*rowPerP: row number for every PE to tackle */
+  int rowPerP = (int) (ceil ((double) height / npes));
+  int blockSize = rowPerP * widthStep;
 #ifdef debug
-  if (me == 0) {
-    printf ("width=%d\n height=%d\n widthStep=%d\n imageSize=%d\n rowPerP=%d\n blockSize=%d\n", 
-           width,height,widthStep,imageSize, rowPerP,blockSize);
-  }
+  if (me == 0)
+    {
+      printf
+	("width=%d\n height=%d\n widthStep=%d\n imageSize=%d\n rowPerP=%d\n blockSize=%d\n",
+	 width, height, widthStep, imageSize, rowPerP, blockSize);
+    }
 #endif
 
   /* allocate symmetric buffer */
-  char* taskB = (char*)shmalloc(imageSize);
+  char *taskB = (char *) shmalloc (imageSize);
   memset (taskB, 0, blockSize);
-    
+
   time_t shmalloc_time = time (NULL);
 #ifdef debug
-  printf ("%d: shmalloc time = %ds\n", me, shmalloc_time-init_time);
+  printf ("%d: shmalloc time = %ds\n", me, shmalloc_time - init_time);
 #endif
 
   /* compute on PEs */
-  for (i = 0; i < rowPerP; i++) {
-    for (j = 0; j < width; j++) {
-      z = 0;
-      c = (double)(right-left) / width * j + left  \
-       + ((double)(bottom-top) / height  * (me * rowPerP + i) + top) * _Complex_I; 
-      for (k = 0; k < maxIter; k++) {
-        z = cpow(z,2) + c;
-        if (cabs(z) > 2) {
-          break;
-        }
-      }
-      if (cabs(z) > 2) {
-        for (nCi = 0; nCi < nC; nCi++) {
-          taskB[i * widthStep + j * nC + nCi]=pallet[(k % palletSize)][nC - 1 - nCi];
-        }
-      }
+  for (i = 0; i < rowPerP; i++)
+    {
+      for (j = 0; j < width; j++)
+	{
+	  z = 0;
+	  c = (double) (right - left) / width * j + left
+	    + ((double) (bottom - top) / height * (me * rowPerP + i) +
+	       top) * _Complex_I;
+	  for (k = 0; k < maxIter; k++)
+	    {
+	      z = cpow (z, 2) + c;
+	      if (cabs (z) > 2)
+		{
+		  break;
+		}
+	    }
+	  if (cabs (z) > 2)
+	    {
+	      for (nCi = 0; nCi < nC; nCi++)
+		{
+		  taskB[i * widthStep + j * nC + nCi] =
+		    pallet[(k % palletSize)][nC - 1 - nCi];
+		}
+	    }
+	}
     }
-  }
 
   time_t compute_time = time (NULL);
 #ifdef debug
@@ -175,66 +185,77 @@ main (int argc, char const *argv[])
 #endif
 
   /* gather data from different PEs */
-  if (me < npes-1) {
-    shmem_putmem (taskB + me * blockSize, taskB, blockSize, 0);
-  }else{
-    int restSize = imageSize - (npes - 1) * blockSize;
-	  
+  if (me < npes - 1)
+    {
+      shmem_putmem (taskB + me * blockSize, taskB, blockSize, 0);
+    }
+  else
+    {
+      int restSize = imageSize - (npes - 1) * blockSize;
+
 #ifdef debug
-    printf ("restSize = %d\n", restSize);
+      printf ("restSize = %d\n", restSize);
 #endif
 
-    shmem_putmem (taskB + me * blockSize, taskB, imageSize - (npes - 1) * blockSize, 0);
-  }
+      shmem_putmem (taskB + me * blockSize, taskB,
+		    imageSize - (npes - 1) * blockSize, 0);
+    }
   shmem_barrier_all ();
 
 
   time_t gather_time = time (NULL);
 
 #ifdef debug
-  printf ("%d: gather time = %ds\n", me, gather_time-compute_time);
+  printf ("%d: gather time = %ds\n", me, gather_time - compute_time);
 #endif
 
 
   /* write to file */
-  if (me == 0) {
-    memcpy (img->imageData, taskB, imageSize);
-  }
+  if (me == 0)
+    {
+      memcpy (img->imageData, taskB, imageSize);
+    }
 
-   
-  shfree(taskB);
 
-  /*save image*/
-  if (me == 0) {
-    time_t finish_time = time(NULL);
-    printf ("Total time cost:      %ds\n\n", (int)(finish_time - start_time));
-    cvSaveImage ("output.png", img, 0);
-    cvReleaseImage (&img);
-  }
-            
+  shfree (taskB);
+
+  /*save image */
+  if (me == 0)
+    {
+      time_t finish_time = time (NULL);
+      printf ("Total time cost:      %ds\n\n",
+	      (int) (finish_time - start_time));
+      cvSaveImage ("output.png", img, 0);
+      cvReleaseImage (&img);
+    }
+
   return 0;
 }
 
-int 
+int
 readConfig ()
 {
   GKeyFile *confile = g_key_file_new ();
-  GKeyFileFlags flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;;
+  GKeyFileFlags flags =
+    G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;;
   GError *error = NULL;
 
-  if (!g_key_file_load_from_file (confile, "mandelbrot.conf", flags, &error)) {
-    g_error (error->message);
-    return -1;
-  }
+  if (!g_key_file_load_from_file (confile, "mandelbrot.conf", flags, &error))
+    {
+      g_error (error->message);
+      return -1;
+    }
 
-  imgWidth = g_key_file_get_integer (confile, "ImageSize", "ImageWidth" , &error);
-  imgHeight = g_key_file_get_integer (confile, "ImageSize", "ImageHeight" , &error);
-  top = g_key_file_get_double (confile, "Area", "top" , &error);
-  bottom = g_key_file_get_double (confile, "Area", "bottom" , &error);
-  left = g_key_file_get_double (confile, "Area", "left" , &error);
-  right = g_key_file_get_double (confile, "Area", "right" , &error);
-  maxIter = g_key_file_get_integer (confile, "Operation", "MaxIteration", &error);
+  imgWidth =
+    g_key_file_get_integer (confile, "ImageSize", "ImageWidth", &error);
+  imgHeight =
+    g_key_file_get_integer (confile, "ImageSize", "ImageHeight", &error);
+  top = g_key_file_get_double (confile, "Area", "top", &error);
+  bottom = g_key_file_get_double (confile, "Area", "bottom", &error);
+  left = g_key_file_get_double (confile, "Area", "left", &error);
+  right = g_key_file_get_double (confile, "Area", "right", &error);
+  maxIter =
+    g_key_file_get_integer (confile, "Operation", "MaxIteration", &error);
 
   return 0;
 }
-
