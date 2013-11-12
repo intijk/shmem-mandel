@@ -5,14 +5,17 @@
 #include <complex.h>
 #include <glib.h>
 
-#define debug
-
 gint imgWidth, imgHeight;
 gdouble top, bottom, left, right;
 gint maxIter;
 
+char *config_filename;
+char *output_filename;
+
 #define PALLET_MAX_SIZE 100
-int readConfig (void);
+
+static int readConfig (void);
+
 /* Color schema original */
 /*
 int palletSize=7;
@@ -82,41 +85,63 @@ int pallet[PALLET_MAX_SIZE][3]={
 */
 
 int
-main (int argc, char const *argv[])
+main (int argc, char *argv[])
 {
+#ifdef DEBUG
+  const time_t start_time = time (NULL);
+#endif
+
+  if (argc > 1)
+    {
+      config_filename = argv[1];
+    }
+  else
+    {
+      config_filename = "mandelbrot.conf";
+    }
+
+  if (argc > 2)
+    {
+      output_filename = argv[2];
+    }
+  else
+    {
+      output_filename = "output.png";
+    }
+
   /* init PEs */
-  time_t start_time = time (NULL);
   start_pes (0);
   int me = _my_pe ();
   int npes = _num_pes ();
 
-  time_t init_time = time (NULL);
-#ifdef debug
-  printf ("%d: shmem init time = %ds\n", me, init_time - start_time);
+#ifdef DEBUG
+  const time_t init_time = time (NULL);
+  printf ("%d: shmem init time = %lds\n", me, init_time - start_time);
 #endif
 
   /* Read and print configuration */
   readConfig ();
 
-/* width:  target image output width, in pixel
- * height: target image output height, in pixel
- * widthStep: number of bytes in one row of image
- * nC: color depth, 3 means 3 bytes, ie. 24 bits
- * */
-  int width = imgWidth;
-  int height = imgHeight;
+  /* width:  target image output width, in pixel
+   * height: target image output height, in pixel
+   * widthStep: number of bytes in one row of image
+   * nC: color depth, 3 means 3 bytes, ie. 24 bits
+   */
+  const int width = imgWidth;
+  const int height = imgHeight;
   int widthStep;
-  int nC = 3;
+  const int nC = 3;
   int i, j, k, nCi;
-  complex z;
-  complex c;
   IplImage *img;
 
   if (me == 0)
     {
-/*
- * Interest image area is described by top, bottom, left and right, they are coordinates on 2d cartesian space.
- */
+      printf ("Reading configuration from file \"%s\"\n", config_filename);
+
+      /*
+       * Interest image area is described by top, bottom, left and
+       * right, they are coordinates on 2d cartesian space.
+       */
       printf ("Image size:\n      %d x %d\n\n", imgWidth, imgHeight);
       printf ("Interest area:\n");
       printf ("      +-------- %-10f --------+\n", top);
@@ -139,11 +164,18 @@ main (int argc, char const *argv[])
 
   int imageSize = widthStep * height;
 
-  /*rowPerP: row number for every PE to tackle */
-  int rowPerP = (int) (ceil ((double) height / npes));
-  /*blockSize: the actual parted image size for each PE(except one when dividing is not even) to compute */
-  int blockSize = rowPerP * widthStep;
-#ifdef debug
+  /*
+   * rowPerP: row number for every PE to tackle
+   */
+  const int rowPerP = (int) (ceil ((double) height / npes));
+
+  /*
+   * blockSize: the actual parted image size for each PE (except one
+   * when dividing is not even) to compute
+   */
+  const int blockSize = rowPerP * widthStep;
+
+#ifdef DEBUG
   if (me == 0)
     {
       printf
@@ -154,25 +186,27 @@ main (int argc, char const *argv[])
 
   /* allocate symmetric buffer */
   char *taskB = (char *) shmalloc (imageSize);
-  memset (taskB, 0, blockSize);
+  // memset (taskB, 0, blockSize);
 
+#ifdef DEBUG
   time_t shmalloc_time = time (NULL);
-#ifdef debug
-  printf ("%d: shmalloc time = %ds\n", me, shmalloc_time - init_time);
+  printf ("%d: shmalloc time = %lds\n", me, shmalloc_time - init_time);
 #endif
 
-/* compute on PEs 
- * k is the iteration times which will decide the pixel's color, after iterations, |z| will great than 2
- * the pixel's color will pickby k, as the color number with k mod palletSize.
- * */
+  /* compute on PEs k is the iteration times which will decide the
+   * pixel's color, after iterations, |z| will great than 2 the
+   * pixel's color will pickby k, as the color number with k mod
+   * palletSize.
+   */
   for (i = 0; i < rowPerP; i++)
     {
       for (j = 0; j < width; j++)
 	{
-	  z = 0;
-	  c = (double) (right - left) / width * j + left
+	  const complex c = (double) (right - left) / width * j + left
 	    + ((double) (bottom - top) / height * (me * rowPerP + i) +
 	       top) * _Complex_I;
+	  complex z = 0;
+
 	  for (k = 0; k < maxIter; k++)
 	    {
 	      z = cpow (z, 2) + c;
@@ -192,9 +226,9 @@ main (int argc, char const *argv[])
 	}
     }
 
+#ifdef DEBUG
   time_t compute_time = time (NULL);
-#ifdef debug
-  printf ("%d: compute time = %ds\n", me, compute_time - shmalloc_time);
+  printf ("%d: compute time = %lds\n", me, compute_time - shmalloc_time);
 #endif
 
   /* gather data from different PEs */
@@ -204,9 +238,9 @@ main (int argc, char const *argv[])
     }
   else
     {
-      int restSize = imageSize - (npes - 1) * blockSize;
+      const int restSize = imageSize - (npes - 1) * blockSize;
 
-#ifdef debug
+#ifdef DEBUG
       printf ("restSize = %d\n", restSize);
 #endif
 
@@ -216,48 +250,47 @@ main (int argc, char const *argv[])
   shmem_barrier_all ();
 
 
-  time_t gather_time = time (NULL);
-
-#ifdef debug
-  printf ("%d: gather time = %ds\n", me, gather_time - compute_time);
+#ifdef DEBUG
+  const time_t gather_time = time (NULL);
+  printf ("%d: gather time = %lds\n", me, gather_time - compute_time);
 #endif
 
-
-  /* write to file */
+  /* save image */
   if (me == 0)
     {
-      memcpy (img->imageData, taskB, imageSize);
-    }
+      img->imageData = taskB;
 
-
-  shfree (taskB);
-
-  /*save image */
-  if (me == 0)
-    {
-
-      printf ("SHMEM time cost:      %ds\n\n",
-	      (int) (gather_time - start_time));
-      cvSaveImage ("output.png", img, 0);
+#ifdef DEBUG
+      printf ("OpenSHMEM time cost:      %lds\n\n",
+	      gather_time - start_time
+	      );
+#endif
+      cvSaveImage (output_filename, img, 0);
       cvReleaseImage (&img);
 
-      time_t finish_time = time (NULL);
-      printf ("Total time cost:      %ds\n\n",
-	      (int) (finish_time - start_time));
+#ifdef DEBUG
+      const time_t finish_time = time (NULL);
+      printf ("Total time cost:      %lds\n\n",
+	      finish_time - start_time
+	      );
+#endif
     }
+
+  shfree (taskB);
 
   return 0;
 }
 
+static
 int
 readConfig ()
 {
   GKeyFile *confile = g_key_file_new ();
-  GKeyFileFlags flags =
-    G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;;
+  const GKeyFileFlags flags =
+    G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
   GError *error = NULL;
 
-  if (!g_key_file_load_from_file (confile, "mandelbrot.conf", flags, &error))
+  if (!g_key_file_load_from_file (confile, config_filename, flags, &error))
     {
       g_error (error->message);
       return -1;
@@ -267,10 +300,14 @@ readConfig ()
     g_key_file_get_integer (confile, "ImageSize", "ImageWidth", &error);
   imgHeight =
     g_key_file_get_integer (confile, "ImageSize", "ImageHeight", &error);
-  top = g_key_file_get_double (confile, "Area", "top", &error);
-  bottom = g_key_file_get_double (confile, "Area", "bottom", &error);
-  left = g_key_file_get_double (confile, "Area", "left", &error);
-  right = g_key_file_get_double (confile, "Area", "right", &error);
+  top =
+    g_key_file_get_double (confile, "Area", "top", &error);
+  bottom =
+    g_key_file_get_double (confile, "Area", "bottom", &error);
+  left =
+    g_key_file_get_double (confile, "Area", "left", &error);
+  right =
+    g_key_file_get_double (confile, "Area", "right", &error);
   maxIter =
     g_key_file_get_integer (confile, "Operation", "MaxIteration", &error);
 

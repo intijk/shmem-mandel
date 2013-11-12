@@ -4,10 +4,12 @@ OPENCV_LIBS = $(shell pkg-config --libs opencv)
 GLIB2_FLAGS = $(shell pkg-config --cflags glib-2.0)
 GLIB2_LIBS = $(shell pkg-config --libs glib-2.0)
 
-OSHCCFLAGS = -g -O3
+OSHCCFLAGS = -g -O3 -Wall
 
 CC = oshcc
 CFLAGS = $(OSHCCFLAGS) $(OPENCV_FLAGS) $(GLIB2_FLAGS)
+
+CFLAGS += -DDEBUG
 
 LIBS = $(OPENCV_LIBS) $(GLIB2_LIBS) -lm
 
