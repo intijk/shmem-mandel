@@ -258,7 +258,7 @@ main (int argc, char *argv[])
   /* save image */
   if (me == 0)
     {
-      img->imageData = taskB;
+      memcpy (img->imageData, taskB, imageSize);
 
 #ifdef DEBUG
       printf ("OpenSHMEM time cost:      %lds\n\n",
