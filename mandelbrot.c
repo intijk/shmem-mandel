@@ -161,22 +161,31 @@ main (int argc, char *argv[])
 
 #ifdef DEBUG
   const time_t start_time = time (NULL);
-#endif
+#endif /* DEBUG */
 
-  /* init PEs */
+  /*
+   *  start OpenSHMEM
+   */
   start_pes (0);
-  int me = _my_pe ();
-  int npes = _num_pes ();
+
+  /*
+   * discover program layout
+   */
+  const int me = _my_pe ();
+  const int npes = _num_pes ();
 
 #ifdef DEBUG
   const time_t init_time = time (NULL);
   printf ("%d: shmem init time = %lds\n", me, init_time - start_time);
-#endif
+#endif /* DEBUG */
 
-  /* Read and print configuration */
+  /*
+   * Read and print configuration
+   */
   (void) readConfig (config_filename);
 
-  /* width:  target image output width, in pixel
+  /*
+   * width:  target image output width, in pixel
    * height: target image output height, in pixel
    * widthStep: number of bytes in one row of image
    * nC: color depth, 3 means 3 bytes, ie. 24 bits
@@ -209,7 +218,9 @@ main (int argc, char *argv[])
       printf ("npes:\n      %d\n\n", npes);
     }
 
-  /* create image */
+  /*
+   * create image container
+   */
   if (me == 0)
     {
       img = cvCreateImage (cvSize (width, height), IPL_DEPTH_8U, nC);
@@ -236,16 +247,22 @@ main (int argc, char *argv[])
 	("width=%d\n height=%d\n widthStep=%d\n imageSize=%d\n rowPerP=%d\n blockSize=%d\n",
 	 width, height, widthStep, imageSize, rowPerP, blockSize);
     }
-#endif
+#endif /* DEBUG */
 
-  /* allocate symmetric buffer */
+  /*
+   * allocate symmetric work area
+   */
   char *taskB = (char *) shmalloc (imageSize);
-  // memset (taskB, 0, blockSize);
+
+  /*
+   * initial image is completley blank
+   */
+  (void) memset (taskB, 0, blockSize);
 
 #ifdef DEBUG
   time_t shmalloc_time = time (NULL);
   printf ("%d: shmalloc time = %lds\n", me, shmalloc_time - init_time);
-#endif
+#endif /* DEBUG */
 
   /* compute on PEs k is the iteration times which will decide the
    * pixel's color, after iterations, |z| will great than 2 the
@@ -283,9 +300,11 @@ main (int argc, char *argv[])
 #ifdef DEBUG
   time_t compute_time = time (NULL);
   printf ("%d: compute time = %lds\n", me, compute_time - shmalloc_time);
-#endif
+#endif /* DEBUG */
 
-  /* gather data from different PEs */
+  /*
+   * gather data from different PEs
+   */
   if (me < npes - 1)
     {
       shmem_putmem (taskB + me * blockSize, taskB, blockSize, 0);
@@ -296,29 +315,36 @@ main (int argc, char *argv[])
 
 #ifdef DEBUG
       printf ("restSize = %d\n", restSize);
-#endif
+#endif /* DEBUG */
 
       shmem_putmem (taskB + me * blockSize, taskB,
 		    imageSize - (npes - 1) * blockSize, 0);
     }
+
+  /*
+   * synchronize after image collection
+   */
   shmem_barrier_all ();
 
 
 #ifdef DEBUG
   const time_t gather_time = time (NULL);
   printf ("%d: gather time = %lds\n", me, gather_time - compute_time);
-#endif
+#endif /* DEBUG */
 
-  /* save image */
+  /*
+   * save image
+   */
   if (me == 0)
     {
-      memcpy (img->imageData, taskB, imageSize);
+      (void) memcpy (img->imageData, taskB, imageSize);
 
 #ifdef DEBUG
       printf ("OpenSHMEM time cost:      %lds\n\n",
 	      gather_time - start_time
 	      );
-#endif
+#endif /* DEBUG */
+
       cvSaveImage (output_filename, img, 0);
       cvReleaseImage (&img);
 
@@ -327,9 +353,12 @@ main (int argc, char *argv[])
       printf ("Total time cost:      %lds\n\n",
 	      finish_time - start_time
 	      );
-#endif
+#endif /* DEBUG */
     }
 
+  /*
+   * clean up work area
+   */
   shfree (taskB);
 
   return 0;
