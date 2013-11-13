@@ -9,16 +9,27 @@ OSHCCFLAGS = -g -O3 -Wall
 CC = oshcc
 CFLAGS = $(OSHCCFLAGS) $(OPENCV_FLAGS) $(GLIB2_FLAGS)
 
+#
 # to show timings and commentary
+#
 CFLAGS += -DDEBUG
+
+LD = $(CC)
+LDFLAGS =
 
 LIBS = $(OPENCV_LIBS) $(GLIB2_LIBS) -lm
 
+# -------------------------------------------------
 
-m: mandelbrot.c
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+TARGET = m
 
-.PHONY: clean
+$(TARGET): mandelbrot.o
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-clean:
-	rm -f m
+.PHONY: tidy clean
+
+tidy:
+	rm -f *.o
+
+clean:	tidy
+	rm -f $(TARGET)
