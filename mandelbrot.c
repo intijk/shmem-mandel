@@ -1,20 +1,20 @@
 #include <highgui.h>
 #include <time.h>
-#include <shmem.h>
 #include <stdio.h>
 #include <complex.h>
 #include <glib.h>
+#include <getopt.h>
 
+#include <shmem.h>
+
+/*
+ * image dimensions
+ */
 gint imgWidth, imgHeight;
 gdouble top, bottom, left, right;
 gint maxIter;
 
-char *config_filename;
-char *output_filename;
-
 #define PALLET_MAX_SIZE 100
-
-static int readConfig (void);
 
 /* Color schema original */
 /*
@@ -84,30 +84,84 @@ int pallet[PALLET_MAX_SIZE][3]={
 };
 */
 
+
+static
+int
+readConfig (char *cfg)
+{
+  GKeyFile *confile = g_key_file_new ();
+  const GKeyFileFlags flags =
+    G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
+  GError *error = NULL;
+
+  if (!g_key_file_load_from_file (confile, cfg, flags, &error))
+    {
+      g_error (error->message);
+      return -1;
+    }
+
+  imgWidth =
+    g_key_file_get_integer (confile, "ImageSize", "ImageWidth", &error);
+  imgHeight =
+    g_key_file_get_integer (confile, "ImageSize", "ImageHeight", &error);
+  top =
+    g_key_file_get_double (confile, "Area", "top", &error);
+  bottom =
+    g_key_file_get_double (confile, "Area", "bottom", &error);
+  left =
+    g_key_file_get_double (confile, "Area", "left", &error);
+  right =
+    g_key_file_get_double (confile, "Area", "right", &error);
+  maxIter =
+    g_key_file_get_integer (confile, "Operation", "MaxIteration", &error);
+
+  return 0;
+}
+
+static
+struct option
+long_options[] =
+  {
+    { "config", required_argument, NULL, 'c' },
+    { "output", required_argument, NULL, 'o' },
+    { NULL,     no_argument,       NULL, 0   },
+  };
+
 int
 main (int argc, char *argv[])
 {
+  char *config_filename = "mandelbrot.conf";
+  char *output_filename = "output.png";
+
+  while (1)
+    {
+      int oidx;
+      const int c = getopt_long (argc, argv,
+				 "c:o:",
+				 long_options,
+				 &oidx
+				 );
+      if (c == -1)
+	{
+	  break;
+	}
+
+      switch (c)
+	{
+	case 'c':
+	  config_filename = optarg;
+	  break;
+	case 'o':
+	  output_filename = optarg;
+	  break;
+	default:
+	  break;
+	}
+    }
+
 #ifdef DEBUG
   const time_t start_time = time (NULL);
 #endif
-
-  if (argc > 1)
-    {
-      config_filename = argv[1];
-    }
-  else
-    {
-      config_filename = "mandelbrot.conf";
-    }
-
-  if (argc > 2)
-    {
-      output_filename = argv[2];
-    }
-  else
-    {
-      output_filename = "output.png";
-    }
 
   /* init PEs */
   start_pes (0);
@@ -120,7 +174,7 @@ main (int argc, char *argv[])
 #endif
 
   /* Read and print configuration */
-  readConfig ();
+  (void) readConfig (config_filename);
 
   /* width:  target image output width, in pixel
    * height: target image output height, in pixel
@@ -162,7 +216,7 @@ main (int argc, char *argv[])
     }
   widthStep = width * nC;
 
-  int imageSize = widthStep * height;
+  const int imageSize = widthStep * height;
 
   /*
    * rowPerP: row number for every PE to tackle
@@ -277,39 +331,6 @@ main (int argc, char *argv[])
     }
 
   shfree (taskB);
-
-  return 0;
-}
-
-static
-int
-readConfig ()
-{
-  GKeyFile *confile = g_key_file_new ();
-  const GKeyFileFlags flags =
-    G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-  GError *error = NULL;
-
-  if (!g_key_file_load_from_file (confile, config_filename, flags, &error))
-    {
-      g_error (error->message);
-      return -1;
-    }
-
-  imgWidth =
-    g_key_file_get_integer (confile, "ImageSize", "ImageWidth", &error);
-  imgHeight =
-    g_key_file_get_integer (confile, "ImageSize", "ImageHeight", &error);
-  top =
-    g_key_file_get_double (confile, "Area", "top", &error);
-  bottom =
-    g_key_file_get_double (confile, "Area", "bottom", &error);
-  left =
-    g_key_file_get_double (confile, "Area", "left", &error);
-  right =
-    g_key_file_get_double (confile, "Area", "right", &error);
-  maxIter =
-    g_key_file_get_integer (confile, "Operation", "MaxIteration", &error);
 
   return 0;
 }

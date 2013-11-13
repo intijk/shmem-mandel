@@ -9,6 +9,7 @@ OSHCCFLAGS = -g -O3 -Wall
 CC = oshcc
 CFLAGS = $(OSHCCFLAGS) $(OPENCV_FLAGS) $(GLIB2_FLAGS)
 
+# to show timings and commentary
 CFLAGS += -DDEBUG
 
 LIBS = $(OPENCV_LIBS) $(GLIB2_LIBS) -lm
@@ -20,4 +21,4 @@ m: mandelbrot.c
 .PHONY: clean
 
 clean:
-	rm -f m output.png
+	rm -f m
