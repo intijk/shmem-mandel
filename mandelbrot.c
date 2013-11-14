@@ -56,20 +56,24 @@ long_options[] =
   {
     { "config", required_argument, NULL, 'c' },
     { "output", required_argument, NULL, 'o' },
+    { "debug",  optional_argument, NULL, 'd' },
     { NULL,     no_argument,       NULL, 0   },
   };
 
 int
 main (int argc, char *argv[])
 {
+  int debug = 0;
   char *config_filename = "mandelbrot.conf";
   char *output_filename = "output.png";
+  time_t start_time, init_time, shmalloc_time,
+    compute_time, gather_time, finish_time;
 
   while (1)
     {
       int oidx;
       const int c = getopt_long (argc, argv,
-				 "c:o:",
+				 "c:o:d::",
 				 long_options,
 				 &oidx
 				 );
@@ -86,14 +90,17 @@ main (int argc, char *argv[])
 	case 'o':
 	  output_filename = optarg;
 	  break;
+	case 'd':
+	  debug = 1;
 	default:
 	  break;
 	}
     }
 
-#ifdef DEBUG
-  const time_t start_time = time (NULL);
-#endif /* DEBUG */
+  if (debug)
+    {
+      start_time = time (NULL);
+    }
 
   /*
    *  start OpenSHMEM
@@ -106,10 +113,11 @@ main (int argc, char *argv[])
   const int me = _my_pe ();
   const int npes = _num_pes ();
 
-#ifdef DEBUG
-  const time_t init_time = time (NULL);
-  printf ("%d: shmem init time = %lds\n", me, init_time - start_time);
-#endif /* DEBUG */
+  if (debug)
+    {
+      init_time = time (NULL);
+      printf ("%d: shmem init time = %lds\n", me, init_time - start_time);
+    }
 
   /*
    * Read and print configuration
@@ -172,14 +180,14 @@ main (int argc, char *argv[])
    */
   const int blockSize = rowPerP * widthStep;
 
-#ifdef DEBUG
-  if (me == 0)
-    {
-      printf
-	("width=%d\n height=%d\n widthStep=%d\n imageSize=%d\n rowPerP=%d\n blockSize=%d\n",
-	 width, height, widthStep, imageSize, rowPerP, blockSize);
-    }
-#endif /* DEBUG */
+  if (debug) {
+    if (me == 0)
+      {
+	printf
+	  ("width=%d\n height=%d\n widthStep=%d\n imageSize=%d\n rowPerP=%d\n blockSize=%d\n",
+	   width, height, widthStep, imageSize, rowPerP, blockSize);
+      }
+  }
 
   /*
    * allocate symmetric work area
@@ -191,10 +199,11 @@ main (int argc, char *argv[])
    */
   (void) memset (taskB, 0, blockSize);
 
-#ifdef DEBUG
-  time_t shmalloc_time = time (NULL);
-  printf ("%d: shmalloc time = %lds\n", me, shmalloc_time - init_time);
-#endif /* DEBUG */
+  if (debug)
+    {
+      shmalloc_time = time (NULL);
+      printf ("%d: shmalloc time = %lds\n", me, shmalloc_time - init_time);
+    }
 
   /* compute on PEs k is the iteration times which will decide the
    * pixel's color, after iterations, |z| will great than 2 the
@@ -229,10 +238,11 @@ main (int argc, char *argv[])
 	}
     }
 
-#ifdef DEBUG
-  time_t compute_time = time (NULL);
-  printf ("%d: compute time = %lds\n", me, compute_time - shmalloc_time);
-#endif /* DEBUG */
+  if (debug)
+    {
+      compute_time = time (NULL);
+      printf ("%d: compute time = %lds\n", me, compute_time - shmalloc_time);
+    }
 
   /*
    * gather data from different PEs
@@ -243,11 +253,11 @@ main (int argc, char *argv[])
     }
   else
     {
-      const int restSize = imageSize - (npes - 1) * blockSize;
-
-#ifdef DEBUG
-      printf ("restSize = %d\n", restSize);
-#endif /* DEBUG */
+      if (debug)
+	{
+	  const int restSize = imageSize - (npes - 1) * blockSize;
+	  printf ("restSize = %d\n", restSize);
+	}
 
       shmem_putmem (taskB + me * blockSize, taskB,
 		    imageSize - (npes - 1) * blockSize, 0);
@@ -259,10 +269,11 @@ main (int argc, char *argv[])
   shmem_barrier_all ();
 
 
-#ifdef DEBUG
-  const time_t gather_time = time (NULL);
-  printf ("%d: gather time = %lds\n", me, gather_time - compute_time);
-#endif /* DEBUG */
+  if (debug)
+    {
+      gather_time = time (NULL);
+      printf ("%d: gather time = %lds\n", me, gather_time - compute_time);
+    }
 
   /*
    * save image
@@ -271,21 +282,25 @@ main (int argc, char *argv[])
     {
       (void) memcpy (img->imageData, taskB, imageSize);
 
-#ifdef DEBUG
-      printf ("OpenSHMEM time cost:      %lds\n\n",
-	      gather_time - start_time
-	      );
-#endif /* DEBUG */
+      if (debug)
+	{
+	  printf ("OpenSHMEM time cost:      %lds\n\n",
+		  gather_time - start_time
+		  );
+	}
 
       cvSaveImage (output_filename, img, 0);
       cvReleaseImage (&img);
 
-#ifdef DEBUG
-      const time_t finish_time = time (NULL);
-      printf ("Total time cost:      %lds\n\n",
-	      finish_time - start_time
-	      );
-#endif /* DEBUG */
+      printf ("Wrote image to \"%s\"\n", output_filename);
+
+      if (debug)
+	{
+	  finish_time = time (NULL);
+	  printf ("Total time cost:      %lds\n\n",
+		  finish_time - start_time
+		  );
+	}
     }
 
   /*
