@@ -92,6 +92,7 @@ main (int argc, char *argv[])
 	  break;
 	case 'd':
 	  debug = 1;
+	  break;
 	default:
 	  break;
 	}
