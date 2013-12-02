@@ -173,13 +173,15 @@ main (int argc, char *argv[])
   /*
    * rowPerP: row number for every PE to tackle
    */
-  const int rowPerP = (int) (ceil ((double) height / npes));
+  const int rowPerP = (int) (floor ((double) height / npes));
 
   /*
    * blockSize: the actual parted image size for each PE (except one
    * when dividing is not even) to compute
+   * restRow: the extra number of rows to tackle for PE n-1
    */
   const int blockSize = rowPerP * widthStep;
+  const int restRow = height - rowPerP * npes;
 
   if (debug) {
     if (me == 0)
@@ -211,7 +213,7 @@ main (int argc, char *argv[])
    * pixel's color will pickby k, as the color number with k mod
    * palletSize.
    */
-  for (i = 0; i < rowPerP; i++)
+  for (i = 0; i < rowPerP + (me == npes - 1 ? restRow : 0); i++)
     {
       for (j = 0; j < width; j++)
 	{
