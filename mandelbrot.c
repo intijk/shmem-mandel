@@ -250,21 +250,23 @@ main (int argc, char *argv[])
   /*
    * gather data from different PEs
    */
+  size_t putn;
+
   if (me < npes - 1)
     {
-      shmem_putmem (taskB + me * blockSize, taskB, blockSize, 0);
+      putn = blockSize;
     }
   else
     {
+      putn = imageSize - (npes - 1) * blockSize;
+
       if (debug)
 	{
-	  const int restSize = imageSize - (npes - 1) * blockSize;
-	  printf ("restSize = %d\n", restSize);
+	  printf ("remaining size = %ld\n", putn);
 	}
-
-      shmem_putmem (taskB + me * blockSize, taskB,
-		    imageSize - (npes - 1) * blockSize, 0);
     }
+
+  shmem_putmem (taskB + me * blockSize, taskB, putn, 0);
 
   /*
    * synchronize after image collection
