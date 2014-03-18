@@ -1,0 +1,53 @@
+This program is an mandelbrot set fracto program implemented in OpenSHMEM.
+The mainpage for this project is https://github.com/intijk/shmem-mandel.
+To know more about madelbrot set http://en.wikipedia.org/wiki/Mandelbrot_set
+
+Dependencies
+---
+#glib2      
+
+ * For parsing configuration file. 
+ * Check if you have glib.h 
+	
+#opencv     
+
+ * For image generation.
+ * Check if you have highgui.h
+
+#OpenSHMEM 
+ 
+ * Check if you have command 'oshcc' and 'oshrun'
+
+Compile
+---
+Compile this by 
+ $make 
+
+Run
+---
+Before run, you may want to check mandelbrot.conf to set the configuration.
+This will essentially effect the running time and runing result of program.
+The [Area] section is to define the intresting area you want to generate.
+[ImageSize] defined the final resolution of image, if you are running this
+code on your laptop, better to change image size to 800x800 to check the 
+result rather than stuck on a huge 8000x8000 image.  
+
+To run this code, command below:
+
+$ oshrun -np $NPES m 
+
+will give you output.png as the default output. There are 3 options you 
+could use in this program.
+
+-d             When give this option, program will output debug information.
+-c FILENAME    Indicate FILENAME as the configuration file. 
+-o OUTPUT      Indicate OUTPUT as the output filename. Yes, extension will
+               affect the final output format of image. For example: 
+               '-o output.png' will give you PNG file while '-o output.jpg'
+               will get JPEG file.
+
+Contact
+---
+Any bug reports or recommendations are welcome to Pengfei(intijk@gmail.com)
+   
+
