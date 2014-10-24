@@ -285,7 +285,9 @@ main (int argc, char *argv[])
    */
   if (me == 0)
     {
-      (void) memcpy (img->imageData, taskB, imageSize);
+     // (void) memcpy (img->imageData, taskB, imageSize);
+		void* backupP=img->imageData;
+		img->imageData=taskB;
 
       if (debug)
 	{
@@ -295,6 +297,7 @@ main (int argc, char *argv[])
 	}
 
       cvSaveImage (output_filename, img, 0);
+	  img->imageData=backupP;
       cvReleaseImage (&img);
 
       printf ("Wrote image to \"%s\"\n", output_filename);
