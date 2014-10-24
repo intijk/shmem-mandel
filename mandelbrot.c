@@ -182,6 +182,8 @@ main (int argc, char *argv[])
    */
   const int blockSize = rowPerP * widthStep;
   const int restRow = height - rowPerP * npes;
+  const int myRows = rowPerP + (me==npes-1?restRow:0);
+  const int myBlockSize = myRows+widthStep;
 
   if (debug) {
     if (me == 0)
@@ -196,11 +198,37 @@ main (int argc, char *argv[])
    * allocate symmetric work area
    */
   char *taskB = (char *) shmalloc (imageSize);
+  int  *taskL = (int *)shmalloc(sizeof(int) * height);
+  char *workB;
+
+
+
+  if(me==0){
+	/* randomize task list */
+	  for(i=0;i<height;i++){
+		  taskL[i]=i;
+	  }
+	  for(i=0;i<height;i++){
+		  int b=taskL[i];
+		  int r=rand()%height;
+		  taskL[i]=taskL[r];
+		  taskL[r]=b;
+	  }
+	  workB=(char *)malloc(myRows*widthStep);
+  }else{
+		workB=taskB;
+  }
+  shmem_barrier_all();
+  if(me > 0){
+  	shmem_getmem(taskL, taskL+rowPerP*me, sizeof(int) * myRows, 0);
+  }
 
   /*
    * initial image is completley blank
    */
-  (void) memset (taskB, 0, blockSize);
+
+  (void) memset (workB, 0, myBlockSize);
+  
 
   if (debug)
     {
@@ -213,33 +241,33 @@ main (int argc, char *argv[])
    * pixel's color will pickby k, as the color number with k mod
    * palletSize.
    */
-  for (i = 0; i < rowPerP + (me == npes - 1 ? restRow : 0); i++)
-    {
-      for (j = 0; j < width; j++)
-	{
-	  const complex c = (double) (right - left) / width * j + left
-	    + ((double) (bottom - top) / height * (me * rowPerP + i) +
-	       top) * _Complex_I;
-	  complex z = 0;
+  for (i = 0; i < myRows; i++)
+  {
+	  for (j = 0; j < width; j++)
+	  {
+		  const complex c = (double) (right - left) / width * j + left
+			  + ((double) (bottom - top) / height * taskL[i] +
+					  top) * _Complex_I;
+		  complex z = 0;
 
-	  for (k = 0; k < maxIter; k++)
-	    {
-	      z = cpow (z, 2) + c;
-	      if (cabs (z) > 2)
-		{
-		  break;
-		}
-	    }
-	  if (cabs (z) > 2)
-	    {
-	      for (nCi = 0; nCi < nC; nCi++)
-		{
-		  taskB[i * widthStep + j * nC + nCi] =
-		    pallet[(k % palletSize)][nC - 1 - nCi];
-		}
-	    }
-	}
-    }
+		  for (k = 0; k < maxIter; k++)
+		  {
+			  z = cpow (z, 2) + c;
+			  if (cabs (z) > 2)
+			  {
+				  break;
+			  }
+		  }
+		  if (cabs (z) > 2)
+		  {
+			  for (nCi = 0; nCi < nC; nCi++)
+			  {
+				  workB[i * widthStep + j * nC + nCi] =
+					  pallet[(k % palletSize)][nC - 1 - nCi];
+			  }
+		  }
+	  }
+  }
 
   if (debug)
     {
@@ -250,23 +278,10 @@ main (int argc, char *argv[])
   /*
    * gather data from different PEs
    */
-  size_t putn;
 
-  if (me < npes - 1)
-    {
-      putn = blockSize;
-    }
-  else
-    {
-      putn = imageSize - (npes - 1) * blockSize;
-
-      if (debug)
-	{
-	  printf ("remaining size = %ld\n", putn);
-	}
-    }
-
-  shmem_putmem (taskB + me * blockSize, taskB, putn, 0);
+  for(i=0;i<myRows;i++){
+  	shmem_putmem (taskB+taskL[i]*widthStep, workB+i*widthStep, widthStep, 0);
+  }
 
   /*
    * synchronize after image collection
