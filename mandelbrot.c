@@ -327,6 +327,7 @@ main (int argc, char *argv[])
    * clean up work area
    */
   shfree (taskB);
+  shfree (taskL);
 
   return 0;
 }
